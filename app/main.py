@@ -28,9 +28,11 @@ async def main() -> None:
         service.register_device(toilet)
     )
 
-    await run_parallel(
-        service.send_msg(Message(hue_light_id, MessageType.SWITCH_ON)),
-        service.send_msg(Message(speaker_id, MessageType.SWITCH_ON)),
+    await run_sequence(
+        run_parallel(
+            service.send_msg(Message(hue_light_id, MessageType.SWITCH_ON)),
+            service.send_msg(Message(speaker_id, MessageType.SWITCH_ON)),
+        ),
         service.send_msg(
             Message(
                 speaker_id,
@@ -41,18 +43,18 @@ async def main() -> None:
     )
 
     await run_parallel(
-        service.run_program(
-            [
-                Message(hue_light_id, MessageType.SWITCH_OFF),
-                Message(speaker_id, MessageType.SWITCH_OFF),
-            ]
-        ),
-        service.run_program(
-            [
-                Message(toilet_id, MessageType.FLUSH),
-                Message(toilet_id, MessageType.CLEAN),
-            ]
+        service.send_msg(Message(hue_light_id, MessageType.SWITCH_OFF)),
+        service.send_msg(Message(speaker_id, MessageType.SWITCH_OFF)),
+        run_sequence(
+            service.send_msg(Message(toilet_id, MessageType.FLUSH)),
+            service.send_msg(Message(toilet_id, MessageType.CLEAN)),
         )
+    )
+
+    await asyncio.gather(
+        service.unregister_device(hue_light_id),
+        service.unregister_device(speaker_id),
+        service.unregister_device(toilet_id)
     )
 
 
